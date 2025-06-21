@@ -155,7 +155,7 @@
 
         <div id="play-overlay">
             <h2>夜の森へようこそ</h2>
-            <p>音を再生するには、下のボタンをクリックしてください。</p>
+            <p>音を再生するには、下のボタンをクリックしてください。<br>（初回クリックで音が有効になります）</p>
             <button id="play-button">再生</button>
         </div>
     </div>
@@ -180,45 +180,41 @@
             fireSound.volume = fireVolumeSlider.value;
 
             // 音声再生を試みる
-            const playPromise1 = ambientSound.play();
-            const playPromise2 = fireSound.play();
-
-            // Promiseが返された場合、再生が成功したかチェック
-            if (playPromise1 !== undefined) {
-                playPromise1.then(() => {
+            // Promiseが返された場合のみthen/catchをチェーンする
+            ambientSound.play()
+                .then(() => {
                     console.log("Ambient sound started successfully.");
-                }).catch(error => {
-                    console.log("Ambient sound playback failed due to user gesture requirement or other error:", error);
-                    // ここでユーザーに再生開始を促すメッセージを表示することも可能
+                })
+                .catch(error => {
+                    console.log("Ambient sound playback failed:", error);
                 });
-            }
-            if (playPromise2 !== undefined) {
-                playPromise2.then(() => {
+            
+            fireSound.play()
+                .then(() => {
                     console.log("Fire sound started successfully.");
-                }).catch(error => {
-                    console.log("Fire sound playback failed due to user gesture requirement or other error:", error);
+                })
+                .catch(error => {
+                    console.log("Fire sound playback failed:", error);
                 });
-            }
             
             // オーバーレイを非表示にする
             playOverlay.style.display = 'none';
         });
 
-
         // 音量スライダーの変更を監視
         ambientVolumeSlider.addEventListener('input', (event) => {
             ambientSound.volume = event.target.value;
-            // スライダー操作時に音声が停止していれば再生を試みる
+            // スライダー操作時に音が停止している場合でも、ユーザー操作後のため再生を試みる
             if (ambientSound.paused && soundEnabled) {
-                ambientSound.play().catch(error => console.log("Ambient sound playback failed on slider input:", error));
+                ambientSound.play().catch(error => console.log("Ambient sound failed to resume on slider input:", error));
             }
         });
 
         fireVolumeSlider.addEventListener('input', (event) => {
             fireSound.volume = event.target.value;
-            // スライダー操作時に音声が停止していれば再生を試みる
+            // スライダー操作時に音が停止している場合でも、ユーザー操作後のため再生を試みる
             if (fireSound.paused && soundEnabled) {
-                fireSound.play().catch(error => console.log("Fire sound playback failed on slider input:", error));
+                fireSound.play().catch(error => console.log("Fire sound failed to resume on slider input:", error));
             }
         });
 
@@ -234,15 +230,13 @@
                 fireSound.volume = fireVolumeSlider.value;
                 
                 // 音声再生を試みる
-                const playPromise1 = ambientSound.play();
-                const playPromise2 = fireSound.play();
-
-                if (playPromise1 !== undefined) {
-                    playPromise1.then(() => { /* 再生成功 */ }).catch(error => { console.log("Ambient sound playback failed on toggle:", error); });
-                }
-                if (playPromise2 !== undefined) {
-                    playPromise2.then(() => { /* 再生成功 */ }).catch(error => { console.log("Fire sound playback failed on toggle:", error); });
-                }
+                ambientSound.play()
+                    .then(() => { /* 再生成功 */ })
+                    .catch(error => { console.log("Ambient sound failed to resume on toggle:", error); });
+                
+                fireSound.play()
+                    .then(() => { /* 再生成功 */ })
+                    .catch(error => { console.log("Fire sound failed to resume on toggle:", error); });
                 
                 toggleSoundButton.textContent = 'サウンド OFF';
             }

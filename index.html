@@ -40,7 +40,7 @@
 
         .controls {
             position: absolute;
-            bottom: 20px;
+            top: 20px; /* 画面上部に配置 */
             left: 50%;
             transform: translateX(-50%);
             background-color: rgba(0, 0, 0, 0.6);
@@ -99,7 +99,6 @@
             width: fit-content; /* 内容に合わせた幅 */
         }
 
-        /* 初回再生を促すオーバーレイ */
         #play-overlay {
             position: absolute;
             top: 0;
@@ -197,7 +196,6 @@
         ambientVolumeSlider.addEventListener('input', (event) => {
             ambientSound.volume = event.target.value;
             // スライダー操作時に音が停止している場合でも、ユーザー操作後のため再生を試みる
-            // ただし、既にplay()で再生が確立していればここは不要になることが多い
             if (ambientSound.paused && soundEnabled && ambientSound.volume > 0) { // 音量が0より大きい場合のみplay()を試みる
                 ambientSound.play().catch(error => console.log("Ambient sound failed to resume on slider input:", error));
             } else if (ambientSound.volume === 0) { // 音量が0になったら一時停止

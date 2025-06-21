@@ -138,8 +138,8 @@
             <img id="forest-background" src="forest.jpg" alt="夜の森">
         </div>
         
-        <audio id="ambient-sound" loop src="forest_night_soundscape.mp3" preload="auto"></audio>
-        <audio id="fire-sound" loop src="campfire_crackling.mp3" preload="auto"></audio>
+        <audio id="ambient-sound" loop src="forest_night_soundscape.mp3" preload="auto" muted></audio>
+        <audio id="fire-sound" loop src="campfire_crackling.mp3" preload="auto" muted></audio>
 
         <div class="controls">
             <div class="volume-control">
@@ -167,54 +167,50 @@
         const toggleSoundButton = document.getElementById('toggle-sound');
         const playOverlay = document.getElementById('play-overlay');
         const playButton = document.getElementById('play-button');
-        let soundEnabled = true; // サウンドが現在有効かどうかの状態
-
-        // 初期音量をスライダーの値に設定
-        ambientSound.volume = ambientVolumeSlider.value;
-        fireSound.volume = fireVolumeSlider.value;
+        let soundEnabled = false; // 初期状態ではミュートなのでfalseにする
 
         // 再生ボタンがクリックされたら音声を再生し、オーバーレイを非表示にする
         playButton.addEventListener('click', () => {
-            // 音量を再設定（念のため）
+            // ここでmuted属性を解除し、音量を設定してからplay()を試みる
+            ambientSound.muted = false;
+            fireSound.muted = false;
+            
             ambientSound.volume = ambientVolumeSlider.value;
             fireSound.volume = fireVolumeSlider.value;
 
             // 音声再生を試みる
-            // Promiseが返された場合のみthen/catchをチェーンする
-            ambientSound.play()
+            Promise.all([ambientSound.play(), fireSound.play()])
                 .then(() => {
-                    console.log("Ambient sound started successfully.");
+                    console.log("All sounds started successfully.");
+                    soundEnabled = true; // 再生が成功したらsoundEnabledをtrueにする
+                    toggleSoundButton.textContent = 'サウンド OFF'; // ボタン表示を更新
+                    playOverlay.style.display = 'none'; // オーバーレイを非表示にする
                 })
                 .catch(error => {
-                    console.log("Ambient sound playback failed:", error);
+                    console.log("Sound playback failed:", error);
+                    alert("音の再生に失敗しました。ブラウザの設定をご確認ください。");
+                    // エラー時にはオーバーレイを残す、または別のメッセージを表示する
                 });
-            
-            fireSound.play()
-                .then(() => {
-                    console.log("Fire sound started successfully.");
-                })
-                .catch(error => {
-                    console.log("Fire sound playback failed:", error);
-                });
-            
-            // オーバーレイを非表示にする
-            playOverlay.style.display = 'none';
         });
 
         // 音量スライダーの変更を監視
         ambientVolumeSlider.addEventListener('input', (event) => {
             ambientSound.volume = event.target.value;
             // スライダー操作時に音が停止している場合でも、ユーザー操作後のため再生を試みる
-            if (ambientSound.paused && soundEnabled) {
+            // ただし、既にplay()で再生が確立していればここは不要になることが多い
+            if (ambientSound.paused && soundEnabled && ambientSound.volume > 0) { // 音量が0より大きい場合のみplay()を試みる
                 ambientSound.play().catch(error => console.log("Ambient sound failed to resume on slider input:", error));
+            } else if (ambientSound.volume === 0) { // 音量が0になったら一時停止
+                ambientSound.pause();
             }
         });
 
         fireVolumeSlider.addEventListener('input', (event) => {
             fireSound.volume = event.target.value;
-            // スライダー操作時に音が停止している場合でも、ユーザー操作後のため再生を試みる
-            if (fireSound.paused && soundEnabled) {
+            if (fireSound.paused && soundEnabled && fireSound.volume > 0) { // 音量が0より大きい場合のみplay()を試みる
                 fireSound.play().catch(error => console.log("Fire sound failed to resume on slider input:", error));
+            } else if (fireSound.volume === 0) { // 音量が0になったら一時停止
+                fireSound.pause();
             }
         });
 
@@ -224,23 +220,27 @@
                 ambientSound.pause();
                 fireSound.pause();
                 toggleSoundButton.textContent = 'サウンド ON';
+                soundEnabled = false; // ここでsoundEnabledをfalseにする
             } else {
-                // 再生する前に現在のスライダーの音量に設定
+                // 再生する前にmutedを解除し、現在のスライダーの音量に設定
+                ambientSound.muted = false;
+                fireSound.muted = false;
+
                 ambientSound.volume = ambientVolumeSlider.value;
                 fireSound.volume = fireVolumeSlider.value;
                 
-                // 音声再生を試みる
-                ambientSound.play()
-                    .then(() => { /* 再生成功 */ })
-                    .catch(error => { console.log("Ambient sound failed to resume on toggle:", error); });
-                
-                fireSound.play()
-                    .then(() => { /* 再生成功 */ })
-                    .catch(error => { console.log("Fire sound failed to resume on toggle:", error); });
-                
-                toggleSoundButton.textContent = 'サウンド OFF';
+                Promise.all([ambientSound.play(), fireSound.play()])
+                    .then(() => {
+                        console.log("Sounds resumed successfully on toggle.");
+                        soundEnabled = true; // 再生が成功したらsoundEnabledをtrueにする
+                        toggleSoundButton.textContent = 'サウンド OFF'; // ボタン表示を更新
+                    })
+                    .catch(error => {
+                        console.log("Sound resumption failed on toggle:", error);
+                        // 再生に失敗したらsoundEnabledはfalseのまま、ボタン表示もONのまま
+                        alert("音の再開に失敗しました。ブラウザの設定をご確認ください。");
+                    });
             }
-            soundEnabled = !soundEnabled;
         });
     </script>
 </body>

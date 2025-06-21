@@ -98,6 +98,38 @@
             align-self: center; /* 中央寄せ */
             width: fit-content; /* 内容に合わせた幅 */
         }
+
+        /* 初回再生を促すオーバーレイ */
+        #play-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 20;
+            text-align: center;
+        }
+
+        #play-button {
+            padding: 15px 30px;
+            background-color: #4CAF50;
+            color: #fff;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #play-button:hover {
+            background-color: #45a049;
+        }
     </style>
 </head>
 <body>
@@ -106,8 +138,8 @@
             <img id="forest-background" src="forest.jpg" alt="夜の森">
         </div>
         
-        <audio id="ambient-sound" loop src="forest_night_soundscape.mp3"></audio>
-        <audio id="fire-sound" loop src="campfire_crackling.mp3"></audio>
+        <audio id="ambient-sound" loop src="forest_night_soundscape.mp3" preload="auto"></audio>
+        <audio id="fire-sound" loop src="campfire_crackling.mp3" preload="auto"></audio>
 
         <div class="controls">
             <div class="volume-control">
@@ -120,6 +152,12 @@
             </div>
             <button id="toggle-sound">サウンド ON/OFF</button>
         </div>
+
+        <div id="play-overlay">
+            <h2>夜の森へようこそ</h2>
+            <p>音を再生するには、下のボタンをクリックしてください。</p>
+            <button id="play-button">再生</button>
+        </div>
     </div>
     <script>
         const ambientSound = document.getElementById('ambient-sound');
@@ -127,31 +165,60 @@
         const ambientVolumeSlider = document.getElementById('ambient-volume');
         const fireVolumeSlider = document.getElementById('fire-volume');
         const toggleSoundButton = document.getElementById('toggle-sound');
-        let soundEnabled = true;
+        const playOverlay = document.getElementById('play-overlay');
+        const playButton = document.getElementById('play-button');
+        let soundEnabled = true; // サウンドが現在有効かどうかの状態
 
         // 初期音量をスライダーの値に設定
         ambientSound.volume = ambientVolumeSlider.value;
         fireSound.volume = fireVolumeSlider.value;
 
-        // 初回ロード時に音声を再生
-        // ブラウザの自動再生ポリシーにより、ユーザーの操作がないと再生されない場合があります
-        ambientSound.play().catch(error => console.log("Ambient sound playback failed:", error));
-        fireSound.play().catch(error => console.log("Fire sound playback failed:", error));
+        // 再生ボタンがクリックされたら音声を再生し、オーバーレイを非表示にする
+        playButton.addEventListener('click', () => {
+            // 音量を再設定（念のため）
+            ambientSound.volume = ambientVolumeSlider.value;
+            fireSound.volume = fireVolumeSlider.value;
+
+            // 音声再生を試みる
+            const playPromise1 = ambientSound.play();
+            const playPromise2 = fireSound.play();
+
+            // Promiseが返された場合、再生が成功したかチェック
+            if (playPromise1 !== undefined) {
+                playPromise1.then(() => {
+                    console.log("Ambient sound started successfully.");
+                }).catch(error => {
+                    console.log("Ambient sound playback failed due to user gesture requirement or other error:", error);
+                    // ここでユーザーに再生開始を促すメッセージを表示することも可能
+                });
+            }
+            if (playPromise2 !== undefined) {
+                playPromise2.then(() => {
+                    console.log("Fire sound started successfully.");
+                }).catch(error => {
+                    console.log("Fire sound playback failed due to user gesture requirement or other error:", error);
+                });
+            }
+            
+            // オーバーレイを非表示にする
+            playOverlay.style.display = 'none';
+        });
+
 
         // 音量スライダーの変更を監視
         ambientVolumeSlider.addEventListener('input', (event) => {
             ambientSound.volume = event.target.value;
-            // 音声が停止している場合、スライダー操作で再生を開始する
+            // スライダー操作時に音声が停止していれば再生を試みる
             if (ambientSound.paused && soundEnabled) {
-                ambientSound.play().catch(error => console.log("Ambient sound playback failed:", error));
+                ambientSound.play().catch(error => console.log("Ambient sound playback failed on slider input:", error));
             }
         });
 
         fireVolumeSlider.addEventListener('input', (event) => {
             fireSound.volume = event.target.value;
-            // 音声が停止している場合、スライダー操作で再生を開始する
+            // スライダー操作時に音声が停止していれば再生を試みる
             if (fireSound.paused && soundEnabled) {
-                fireSound.play().catch(error => console.log("Fire sound playback failed:", error));
+                fireSound.play().catch(error => console.log("Fire sound playback failed on slider input:", error));
             }
         });
 
@@ -165,8 +232,18 @@
                 // 再生する前に現在のスライダーの音量に設定
                 ambientSound.volume = ambientVolumeSlider.value;
                 fireSound.volume = fireVolumeSlider.value;
-                ambientSound.play().catch(error => console.log("Ambient sound playback failed:", error));
-                fireSound.play().catch(error => console.log("Fire sound playback failed:", error));
+                
+                // 音声再生を試みる
+                const playPromise1 = ambientSound.play();
+                const playPromise2 = fireSound.play();
+
+                if (playPromise1 !== undefined) {
+                    playPromise1.then(() => { /* 再生成功 */ }).catch(error => { console.log("Ambient sound playback failed on toggle:", error); });
+                }
+                if (playPromise2 !== undefined) {
+                    playPromise2.then(() => { /* 再生成功 */ }).catch(error => { console.log("Fire sound playback failed on toggle:", error); });
+                }
+                
                 toggleSoundButton.textContent = 'サウンド OFF';
             }
             soundEnabled = !soundEnabled;
